@@ -23,7 +23,7 @@ const TodoItem = ({ todo, toggleTodo, editTodo, deleteTodo }: TodoItemProps): JS
   const handleEditSave = (): void => {
     if (editTitle.trim()) {
       editTodo(todo.id, editTitle);
-      setEditTitle('');
+      // setEditTitle(''); // 필요없음
       setIsEdit(false);
     }
   };
