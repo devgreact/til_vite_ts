@@ -1,14 +1,12 @@
 import React from 'react';
-import GoodList from './components/shop/GoodList';
-import Cart from './components/shop/Cart';
-import { Wallet } from './components/shop/Wallet';
-import { ShopProvider } from './features/shop';
 import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import GoodsPage from './pages/GoodsPage';
+import { ShopProvider } from './features/shop';
+import Calendar from './pages/Calendar';
 import CartPage from './pages/CartPage';
-import WalletPage from './pages/WalletPage';
+import GoodsPage from './pages/GoodsPage';
+import HomePage from './pages/HomePage';
 import NotFound from './pages/NotFound';
+import WalletPage from './pages/WalletPage';
 
 function App() {
   // ts 자리
@@ -61,6 +59,7 @@ function App() {
           </NavLink>
         </nav>
         <h1>🧶 나의 가게</h1>
+        <Calendar />
         <ShopProvider>
           <div>
             <Routes>
