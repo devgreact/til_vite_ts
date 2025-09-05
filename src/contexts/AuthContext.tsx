@@ -9,6 +9,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { supabase } from '../lib/supabase';
+import type { DeleteRequestInsert } from '../types/TodoType';
 
 // 1. 인증 컨텍스트 타입
 type AuthContextType = {
@@ -24,6 +25,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   // 회원정보 로딩 상태
   loading: boolean;
+  // 회원탈퇴 기능
+  deleteAccount: () => Promise<{ error?: string; success?: boolean; message?: string }>;
 };
 
 // 2. 인증 컨텍스트 생성 (인증 기능을 컴포넌트에서 활용하게 해줌.)
@@ -104,6 +107,49 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     await supabase.auth.signOut();
   };
 
+  // 회원 탈퇴기능
+  const deleteAccount: AuthContextType['deleteAccount'] = async () => {
+    try {
+      // 기존에 사용한 데이터들을 먼저 정리한다.
+      const { error: profileError } = await supabase.from('profiles').delete().eq('id', user?.id);
+      if (profileError) {
+        console.log('프로필 삭제 실패 : ', profileError.message);
+        return { error: '프로필 삭제에 실패했습니다.' };
+      }
+
+      // 탈퇴 신청 데이터 추가
+      // account_deletion_requests 에  Pending 으로 Insert 합니다.
+      // 등록할 삭제 데이터
+      const deleteInfo: DeleteRequestInsert = {
+        user_id: user?.id,
+        reason: '사용자 요청',
+        status: 'pending',
+        user_email: user?.email as string,
+      };
+      const { error: deleteRequestsError } = await supabase
+        .from('account_deletion_requests')
+        .insert([{ ...deleteInfo }]);
+
+      if (deleteRequestsError) {
+        console.log('탈퇴 목록 추가에 실패 : ', deleteRequestsError.message);
+        return { error: '탈퇴 목록 추가에 실패했습니다.' };
+      }
+
+      // 혹시 SMTP 서버가 구축이 가능하다면 관리자에게 이메일 전송하는 자리
+
+      // 로그아웃 시켜줌.
+      await signOut();
+
+      return {
+        success: true,
+        message: '계정 삭제가 요청되었습니다. 관리자 승인 후 완전히 삭제됩니다.',
+      };
+    } catch (err) {
+      console.log('탈퇴 요청 기능 오류 : ', err);
+      return { error: '계정 탈퇴 처리 중 오류가 발생하였습니다.' };
+    }
+  };
+
   const value: AuthContextType = {
     signUp,
     signIn,
@@ -111,6 +157,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     user,
     session,
     loading,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

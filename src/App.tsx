@@ -7,6 +7,7 @@ import TodosPage from './pages/TodosPage';
 import AuthCallback from './pages/AuthCallback';
 import Protected from './components/Protected';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
@@ -54,6 +55,15 @@ function App() {
               element={
                 <Protected>
                   <ProfilePage />
+                </Protected>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminPage />
                 </Protected>
               }
             />
