@@ -5,6 +5,11 @@ export type Todo = Database['public']['Tables']['todos']['Row'];
 export type TodoInsert = Database['public']['Tables']['todos']['Insert'];
 export type TodoUpdate = Database['public']['Tables']['todos']['Update'];
 
+// 사용자 정보
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
+export type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -15,6 +20,45 @@ export type Database = {
   };
   public: {
     Tables: {
+      memos: {
+        Row: {
+          created_at: string;
+          id: number;
+          memo: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: number;
+          memo: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: number;
+          memo?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          avatar_url: string | null;
+          created_at: string | null;
+          id: string;
+          nickname: string | null;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          created_at?: string | null;
+          id: string;
+          nickname?: string | null;
+        };
+        Update: {
+          avatar_url?: string | null;
+          created_at?: string | null;
+          id?: string;
+          nickname?: string | null;
+        };
+        Relationships: [];
+      };
       todos: {
         Row: {
           completed: boolean;

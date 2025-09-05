@@ -6,16 +6,24 @@ import SignInPage from './pages/SignInPage';
 import TodosPage from './pages/TodosPage';
 import AuthCallback from './pages/AuthCallback';
 import Protected from './components/Protected';
+import ProfilePage from './pages/ProfilePage';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
+  // 관리자인 경우 메뉴 추가로 출력하기
+  // isAdmin 에는 true/false
+  const isAdmin = user?.email === 'tarolong@naver.com';
+
   return (
     <nav style={{ display: 'flex', gap: 20, justifyContent: 'flex-end', padding: 40 }}>
       <Link to="/">홈</Link>
       {user && <Link to="/todos">할일</Link>}
       {!user && <Link to="/signup">회원가입</Link>}
       {!user && <Link to="/signin">로그인</Link>}
+      {user && <Link to="/profile">프로필</Link>}
       {user && <button onClick={signOut}>로그아웃</button>}
+
+      {isAdmin && <Link to="/admin">관리자</Link>}
     </nav>
   );
 };
@@ -37,6 +45,15 @@ function App() {
               element={
                 <Protected>
                   <TodosPage />
+                </Protected>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <Protected>
+                  <ProfilePage />
                 </Protected>
               }
             />
