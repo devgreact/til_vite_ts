@@ -13,17 +13,41 @@ import type { Profile, ProfileInsert, ProfileUpdate } from '../types/TodoType';
 import { supabase } from './supabase';
 
 // 사용자 프로필 생성
+// const createProfile = async (newUserProfile: ProfileInsert): Promise<boolean> => {
+//   try {
+//     const { error } = await supabase.from('profiles').insert([{ ...newUserProfile }]);
+//     if (error) {
+//       console.log(`프로필 추가에 실패 : ${error.message}`);
+//       return false;
+//     }
+
+//     return true;
+//   } catch (error) {
+//     console.log(`프로필 생성 오류 : ${error}`);
+//     return false;
+//   }
+// };
+// 사용자 프로필 생성
 const createProfile = async (newUserProfile: ProfileInsert): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('profiles').insert([{ ...newUserProfile }]);
+    console.log('프로필 생성 시도:', newUserProfile);
+
+    const { error, data } = await supabase.from('profiles').insert([{ ...newUserProfile }]);
+
     if (error) {
-      console.log(`프로필 추가에 실패 : ${error.message}`);
+      console.error(`프로필 추가에 실패:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       return false;
     }
 
+    console.log('프로필 생성 성공:', data);
     return true;
   } catch (error) {
-    console.log(`프로필 생성 오류 : ${error}`);
+    console.error(`프로필 생성 오류:`, error);
     return false;
   }
 };

@@ -45,27 +45,34 @@ function SignUpPage() {
       options: {
         // 회원 가입 후 이메일로 인증 확인시 리다이렉트 될 URL
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // 메타데이터로 닉네임 전달 (이메일 인증 후 프로필 생성 시 사용)
+        data: {
+          nickname: nickName,
+        },
       },
     });
 
     if (error) {
       setMsg(`회원가입 오류 : ${error}`);
     } else {
-      // 회원가입 성공했으므로 profiles 도 채워준다.
-      if (data?.user?.id) {
-        // 프로필을 추가한다.
-        const newUser: ProfileInsert = { id: data.user.id, nickname: nickName };
-        const result = await createProfile(newUser);
-        if (result) {
-          // 프로필 추가가 성공한 경우
-          setMsg(`회원가입 및 프로필 생성 성공했습니다. 이메일 인증 링크를 확인해 주세요. `);
-        } else {
-          // 프로필 추가가 실패한 경우
-          setMsg(`회원가입은 성공, 하지만, 프로필 생성 실패했습니다`);
-        }
-      } else {
-        setMsg(`회원가입이 성공했습니다. 이메일 인증 링크를 확인해 주세요.`);
-      }
+      setMsg(
+        `회원가입이 성공했습니다. 이메일 인증 링크를 확인해 주세요. 인증 완료 후 프로필이 자동으로 생성됩니다.`,
+      );
+      // // 회원가입 성공했으므로 profiles 도 채워준다.
+      // if (data?.user?.id) {
+      //   // 프로필을 추가한다.
+      //   const newUser: ProfileInsert = { id: data.user.id, nickname: nickName };
+      //   const result = await createProfile(newUser);
+      //   if (result) {
+      //     // 프로필 추가가 성공한 경우
+      //     setMsg(`회원가입 및 프로필 생성 성공했습니다. 이메일 인증 링크를 확인해 주세요. `);
+      //   } else {
+      //     // 프로필 추가가 실패한 경우
+      //     setMsg(`회원가입은 성공, 하지만, 프로필 생성 실패했습니다`);
+      //   }
+      // } else {
+      //   setMsg(`회원가입이 성공했습니다. 이메일 인증 링크를 확인해 주세요.`);
+      // }
     }
   };
 
