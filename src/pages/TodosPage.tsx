@@ -23,7 +23,8 @@ const TodosContent = ({
   return (
     <div>
       <div>
-        <TodoWrite />
+        {/* 새글 등록시 1페이지로 이동후 목록새로고침 */}
+        <TodoWrite handleChangePage={handleChangePage} />
       </div>
       <div>
         <TodoList />
@@ -76,7 +77,7 @@ function TodosPage() {
   return (
     <div>
       <h2>{profile?.nickname}할 일</h2>
-      <TodoProvider>
+      <TodoProvider currentPage={currentPage} limit={itemsPerPage}>
         <TodosContent
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}

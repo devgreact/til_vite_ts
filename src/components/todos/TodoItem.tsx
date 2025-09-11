@@ -81,7 +81,8 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
 
   return (
     <li>
-      {globalIndex}
+      {/* 출력 번호 */}
+      <span>{globalIndex}</span>
       {isEdit ? (
         <>
           <input
