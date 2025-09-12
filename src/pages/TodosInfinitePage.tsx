@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import { useAuth } from '../contexts/AuthContext';
 import { InfiniteScrollProvider, useInfiniteScroll } from '../contexts/InfiniteScrollContext';
-import type { Profile, Todo, TodoInsert } from '../types/TodoType';
 import { getProfile } from '../lib/profile';
-import InfiniteScroll from 'react-infinite-scroll-component';
+import type { Profile } from '../types/TodoType';
 // 용서하세요. 입력창 컴포넌트
 const InfiniteTodoWrite = () => {
   const { addTodo, loadingIntialTodos } = useInfiniteScroll();
@@ -163,63 +163,15 @@ const InfiniteTodoList = () => {
       {todos.length === 0 ? (
         <p>등록된 할일이 없습니다.</p>
       ) : (
-        <div style={{ height: '600px', overflow: 'auto' }}>
+        // 무한 스크롤 라이브러리 적용
+        <div style={{ height: 500, overflow: 'auto' }}>
           <InfiniteScroll
             dataLength={todos.length}
             next={loadMoreTodos}
             hasMore={hasMore}
-            loader={
-              <div
-                style={{
-                  color: '#007bff',
-                  fontSize: '16px',
-                  textAlign: 'center',
-                  padding: '20px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  margin: '10px 0',
-                  border: '1px solid #dee2e6',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      border: '2px solid #007bff',
-                      borderTop: '2px solid transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                    }}
-                  />
-                  🔄 더 많은 할 일을 불러오는 중...
-                </div>
-              </div>
-            }
-            endMessage={
-              <div
-                style={{
-                  color: '#6c757d',
-                  fontSize: '16px',
-                  textAlign: 'center',
-                  padding: '20px',
-                  backgroundColor: '#e9ecef',
-                  borderRadius: '8px',
-                  margin: '10px 0',
-                  border: '1px solid #dee2e6',
-                }}
-              >
-                ✅ 모든 데이터를 불러왔습니다.
-              </div>
-            }
+            height={500}
+            loader={<div>데이터를 불러오는 중...</div>}
+            endMessage={<div>모든데이터를 불러왔습니다.</div>}
           >
             <ul>
               {todos.map((item, index) => (
@@ -271,16 +223,6 @@ const InfiniteTodoList = () => {
           </InfiniteScroll>
         </div>
       )}
-
-      {/* CSS 애니메이션을 위한 스타일 */}
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 };
