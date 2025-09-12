@@ -8,6 +8,7 @@ import AuthCallback from './pages/AuthCallback';
 import Protected from './components/Protected';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import TodosInfinitePage from './pages/TodosInfinitePage';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
@@ -19,6 +20,7 @@ const TopBar = () => {
     <nav style={{ display: 'flex', gap: 20, justifyContent: 'flex-end', padding: 40 }}>
       <Link to="/">홈</Link>
       {user && <Link to="/todos">할일</Link>}
+      {user && <Link to="/todos-infinite">무한스크롤 할일</Link>}
       {!user && <Link to="/signup">회원가입</Link>}
       {!user && <Link to="/signin">로그인</Link>}
       {user && <Link to="/profile">프로필</Link>}
@@ -46,6 +48,14 @@ function App() {
               element={
                 <Protected>
                   <TodosPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/todos-infinite"
+              element={
+                <Protected>
+                  <TodosInfinitePage />
                 </Protected>
               }
             />

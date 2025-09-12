@@ -125,3 +125,47 @@ export const getTodosPaginated = async (
     currentPage: page,
   };
 };
+
+// 무한 스크롤 todo 목록 조회
+export const getTodosInfinite = async (
+  offset: number = 0,
+  limit: number = 5,
+): Promise<{ todos: Todo[]; hasMore: boolean; totalCount: number }> => {
+  try {
+    // 전체 todos 의 Row 개수
+    const { count, error: countError } = await supabase
+      .from('todos')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      throw new Error(`getTodosInfinite count 오류 : ${countError.message}`);
+    }
+
+    // 무한 스크롤 데이터 조회
+    const { data, error: limitError } = await supabase
+      .from('todos')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (limitError) {
+      throw new Error(`getTodosInfinite limit 오류 : ${limitError.message}`);
+    }
+
+    // 전체 개수
+    const totalCount = count || 0;
+
+    // 앞으로 더 가져올 것이 있는가?
+    const hasMore = offset + limit < totalCount;
+
+    // 최종 값을 리턴함.
+    return {
+      todos: data || [],
+      hasMore,
+      totalCount,
+    };
+  } catch (error) {
+    console.log(`getTodosInfinite 오류 : ${error}`);
+    throw new Error(`getTodosInfinite 오류 : ${error}`);
+  }
+};
