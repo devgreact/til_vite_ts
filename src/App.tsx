@@ -1,14 +1,17 @@
 import { Link, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import HomePage from './pages/HomePage';
-import SignUpPage from './pages/SignUpPage';
-import SignInPage from './pages/SignInPage';
-import TodosPage from './pages/TodosPage';
-import AuthCallback from './pages/AuthCallback';
 import Protected from './components/Protected';
-import ProfilePage from './pages/ProfilePage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AdminPage from './pages/AdminPage';
+import AuthCallback from './pages/AuthCallback';
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
+import SignInPage from './pages/SignInPage';
+import SignUpPage from './pages/SignUpPage';
+import TodoDetailPage from './pages/TodoDetailPage';
+import TodoEditPage from './pages/TodoEditPage';
+import TodoListPage from './pages/TodoListPage';
 import TodosInfinitePage from './pages/TodosInfinitePage';
+import TodoWritePage from './pages/TodoWritePage';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
@@ -79,7 +82,31 @@ function App() {
               path="/todos"
               element={
                 <Protected>
-                  <TodosPage />
+                  <TodoListPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/todos/write"
+              element={
+                <Protected>
+                  <TodoWritePage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/todos/edit/:id"
+              element={
+                <Protected>
+                  <TodoEditPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/todos/detail/:id"
+              element={
+                <Protected>
+                  <TodoDetailPage />
                 </Protected>
               }
             />
