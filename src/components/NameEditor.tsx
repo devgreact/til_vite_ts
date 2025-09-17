@@ -11,12 +11,12 @@ const NameEditor = ({}: NameEditorProps): JSX.Element => {
   };
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      console.log('Enter 입력함.');
+      //console.log('Enter 입력함.');
       setName('');
     }
   };
   const handleClick = (): void => {
-    console.log('확인');
+    //console.log('확인');
     setName('');
   };
   return (
