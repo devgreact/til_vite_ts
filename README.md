@@ -705,6 +705,17 @@ function TodoEditPage() {
     }
   };
 
+  const handleCancel = () => {
+    // 바로 취소하지 않음.
+    if (title !== todo?.title || content !== (todo?.content || '')) {
+      if (window.confirm('수정 중인 내용이 있습니다. 정말 취소하시겠습니까?')) {
+        navigate('/todos');
+      }
+    } else {
+      navigate('/todos');
+    }
+  };
+
   if (loading) {
     return <Loading message="할 일 정보를 불러오는 중 ..." size="lg" />;
   }
@@ -809,7 +820,11 @@ function TodoEditPage() {
         </div>
         {/* 버튼들 */}
         <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-          <button className="btn btn-secondary" disabled={saving || toggleLoading}>
+          <button
+            className="btn btn-secondary"
+            disabled={saving || toggleLoading}
+            onClick={handleCancel}
+          >
             취소
           </button>
           <button
