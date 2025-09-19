@@ -1,42 +1,10 @@
-# Editor 와 Supabase Storage 연동
+# Editor 와 파일 삭제
 
-- 사용자가 내용 작성 중 이미지를 배치한다면 기본 기능을 막는다.
-  - 1. 그냥 text 로 처리한다.
-  - 2. 이미지를 배치하면 storage 업로드 후 url 받아서 보여준다.
-  - 3. 이미지를 배치하면 미리보기 URL 을 생성한 후 보여주고
-    - 3.0. img src="임시주소", 이미지 파일은 별도로 보관함.
-    - 3.1. 사용자가 저장 버튼 누르면 그때 storage 에 등록자 폴더생성 후 저장하고
-    - 3.2. 저장이 성공되면 getURL 로 주소알아내고,
-    - 3.3. content 의 내용중 img src="주소" 교체하고,
-    - 3.4. DB 에 저장한다.
+## 1. 오류 개선
 
-## 1. Supabase Storage 설정
-
-### 1.1. `todo-images` 를 생성합니다.
-
-- public bucket : 활성
-- Restrict file size : 50M
-- Allowed MIME types : `image/jpeg, image/png, image/gif, image/webp, image/svg+xml`
-- 주의 사항 : ` image/*` 는 배제합니다.
-
-### 1.2. `RLS 를 설정`합니다.
-
-```sql
-CREATE POLICY "Public object access Todo Images" ON storage.objects FOR ALL USING (bucket_id = 'todo-images');
-```
-
-### 1.3. 업로드시 `todo-images/사용자ID폴더/파일들...`
-
-## 2. 새글 및 이미지 등록
-
-### 2.1. 텍스트 에디터의 이미지 업로드 기능 처리
-
-- 임시 미리보기 이미지를 생성하고,
-- 실제로는 file 업로드 하고,
-- url 을 받아서 내용 수정후,
-- content 를 insert 함.
-
-- /src/components/RichTextEditor.tsx
+- 기준 : 1번이라도 발생하면 발생한 겁니다.
+- 작성중에 이미지를 제거하면 정확하게 이미지가 제거되지 않고 등록되는 문제
+- 계속해서 value 를 감시해서 최종 html 이 제대로 업데이트가 안되고 있더라.
 
 ```tsx
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -90,6 +58,8 @@ const RichTextEditor = ({
     // <input type="file" accept = "image/*" onchange="" />
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
+    // 여러개는 업데이트 예정
+    // input.setAttribute('multiple', 'true');
     input.setAttribute('accept', 'image/*');
     input.click();
     input.onchange = async () => {
@@ -117,6 +87,7 @@ const RichTextEditor = ({
 
       // 생성된 정보를 보관한다.
       tempImagesRef.current.push(tempImage);
+      console.log(`이미지가 추가됨 : ${tempId} ${tempUrl}`);
 
       // 실제 React Quill 내용 창에 출력
       const quill = quilRef.current?.getEditor();
@@ -137,6 +108,9 @@ const RichTextEditor = ({
           img.style.height = 'auto';
           img.style.display = 'block';
           img.style.margin = '10px 0';
+
+          // 유일한 ID 를 부여해서 추후 비교용으로 활용
+          img.setAttribute('data-temp-id', tempId);
 
           const p = document.createElement('p');
           p.appendChild(img);
@@ -165,7 +139,7 @@ const RichTextEditor = ({
           console.log('이미지 삽입 중 오류 : ', error);
           // 오류 이더라도 다시 html 을 추가해 봄.
           try {
-            const imgHtml = `<img src=${tempUrl} style="max-width:100%; height:auto; maring: 10px 0;"/>`;
+            const imgHtml = `<img src=${tempUrl} data-temp-id=${tempId} style="max-width:100%; height:auto; maring: 10px 0;"/>`;
             quill.clipboard.dangerouslyPasteHTML(insertIndex, imgHtml);
             quill.setSelection(insertIndex + 1);
           } catch (err) {
@@ -190,22 +164,49 @@ const RichTextEditor = ({
     // 내용에서 blob 으로 된 글자를 찾아줄 겁니다.
     // 글자들을 비교할때 정규표현식(Regular Expression)을 사용함.
     const tempUrlRegex = /blob:[^"'\s]+/g;
+
     // 실제로 비교를 실행
+    // const matchs = valueRef.current.match(tempUrlRegex);
+    // if (matchs) {
+    //   matchs.forEach(item => usedTempUrls.add(item));
+    // }
+
+    // 오류개선
     const matchs = valueRef.current.match(tempUrlRegex);
-    if (matchs) {
-      matchs.forEach(item => usedTempUrls.add(item));
-    }
+
+    // 순서대로 표시된 이미지를 재정렬
+    const orderdImages: TempImageFile[] = [];
+    matchs?.forEach(tempUrl => {
+      const foundImage = tempImagesRef.current.find(item => item.tempUrl === tempUrl);
+      if (foundImage && !usedTempUrls.has(tempUrl)) {
+        orderdImages.push(foundImage);
+        usedTempUrls.add(tempUrl);
+      }
+    });
+
     // 사용하지 않는 임시 이미지들 정리
     // 메모리 누수를 막아주기 위해서
-    tempImagesRef.current = tempImagesRef.current.filter(item => {
-      const isUsed = usedTempUrls.has(item.tempUrl);
-      // 내용에 임시 미리보기 URL 글자가 없다면 삭제해야 한다.
-      if (!isUsed) {
-        // 사용하지 않는 blob URL 정리하기
+    // tempImagesRef.current = tempImagesRef.current.filter(item => {
+    //   const isUsed = usedTempUrls.has(item.tempUrl);
+    //   // 내용에 임시 미리보기 URL 글자가 없다면 삭제해야 한다.
+    //   if (!isUsed) {
+    //     // 사용하지 않는 blob URL 정리하기
+    //     URL.revokeObjectURL(item.tempUrl);
+    //   }
+    //   return isUsed;
+    // });
+
+    // 개선된 코드 : 사용하지 않는 임시 이미지들을 정리
+    // 메모리 누수를 막아주기 위해서
+    tempImagesRef.current.forEach(item => {
+      if (!usedTempUrls.has(item.tempUrl)) {
+        // 사용하지 않는 blob url 을 정리하기
         URL.revokeObjectURL(item.tempUrl);
+        console.log(`이미지 삭제됨 : ${item.id} ${item.tempUrl}`);
       }
-      return isUsed;
     });
+    // 에디터 순서대로 재 정렬된 배열로 업데이트
+    tempImagesRef.current = orderdImages;
   }, []);
 
   // 에디터의 내용이 변경되면 임시 이미지 동기화
@@ -261,7 +262,7 @@ const RichTextEditor = ({
       const imageFiles = tempImagesRef.current.map(item => item.file);
       onImagesChange(imageFiles);
     }
-  }, [onImagesChange, tempImagesRef.current.length]);
+  }, [onImagesChange, value]); // 에디터에 내용이 바뀔때마다 이미지 목록 업데이트
 
   // 에디터가 마운트 되면
   // 즉, 화면에 보이면 이미지 버튼에 이벤트 리스너추가
@@ -305,34 +306,178 @@ const RichTextEditor = ({
 export default RichTextEditor;
 ```
 
-- /src/pages/TodoWritePage.tsx
+## 2. 게시글 삭제시 파일도 같이 삭제
+
+- 삭제는 DB 삭제 시 먼저 파일을 삭제하고, 내용을 삭제한다.
+- todoService.ts 에서 처리하면 됨.
+- deleteTodo 만 업데이트 함.
+
+```ts
+// Todo 삭제
+// content 에 포함된 파일을 제거하고 나서 내용을 삭제함.
+export const deleteTodo = async (id: number): Promise<void> => {
+  try {
+    // 1. 먼저 삭제할 todo의 content 에서 이미지의 url 만 추출한다.
+    const { data: todo, error: fetchError } = await supabase
+      .from('todos')
+      .select('content, user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`deleteTodo fetch 오류 : ${fetchError.message}`);
+    }
+    // 2. content 에서 이미지 URL을 추출
+    if (todo.content) {
+      // 정규 표현식으로 특정 패턴의 글자를 알아낸다.
+      const imageUrlPattern = /https:\/\/[^"'\s]+\.(jpg|jpeg|png|gif|webp|svg)/gi;
+      const imageUrls = todo.content.match(imageUrlPattern) || [];
+      // 배열의 반복으로 요소를 찾아내는 법
+      // imageUrls 에서 url 을 찾아서 파일 삭제 supabase 실행함.
+      for (const url of imageUrls) {
+        try {
+          // url : https://erontyifxxztudowhees.supabase.co/storage/v1/object/public/todo-images/6b66829c-ec6c-4750-ad15-90641c3cb0fe/6b66829c-ec6c-4750-ad15-90641c3cb0fe_1758243951105_icon.png
+          const urlParts = url.split('/');
+          // urlParas : [ "https:",  "", "erontyifxxztudowhees.supabase.co"....]
+          // todo-images 라는 버킷이 몇번째 인지를 알아냄.
+          // 버킷 다음이 실제 파일의 경로가 됨.
+          const bucketIndex = urlParts.findIndex((item: string) => item === 'todo-images');
+
+          // todo-images 의 인덱스를 찾았으므로 실제 파일 경로가 있는지 검사
+          // 만약 없다면 bucketIndex 가  -1 이라고 담겨짐
+          if (bucketIndex !== -1 && bucketIndex + 1 < urlParts.length) {
+            // 6b66829c-ec6c-4750-ad15-90641c3cb0fe/6b66829c-ec6c-4750-ad15-90641c3cb0fe_1758243951105_icon.png
+            // 삭제 되어야 할 파일 경로 및 파일명
+            const filePath = urlParts.slice(bucketIndex + 1).join('/');
+            const { error: deleteError } = await supabase.storage
+              .from('todo-images')
+              .remove([filePath]);
+
+            if (deleteError) {
+              console.log(`이미지 파일 삭제 실패 : ${filePath}`, deleteError.message);
+            }
+          }
+        } catch (imageError) {
+          console.log(`이미지 삭제 중 오류 : ${imageError}`);
+        }
+      }
+    }
+
+    const { error } = await supabase.from('todos').delete().eq('id', id);
+    if (error) {
+      throw new Error(`deleteTodo 오류 : ${error.message}`);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+```
+
+## 3. 게시글 수정시 파일 삭제와 추가
+
+- /src/pages/TodoEditPage.tsx
 
 ```tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import type { Profile, TodoInsert } from '../types/TodoType';
+import { useNavigate, useParams } from 'react-router-dom';
+import type { Profile, Todo } from '../types/TodoType';
 import { getProfile } from '../lib/profile';
-import { useNavigate } from 'react-router-dom';
-import { createTodo } from '../services/todoService';
+import { getTodoById, toggleTodo, updateTodo } from '../services/todoService';
+import Loading from '../components/Loading';
 import RichTextEditor from '../components/RichTextEditor';
 import { supabase } from '../lib/supabase';
 
-function TodoWritePage() {
+function TodoEditPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  // 사용자 입력 내용
+  const { id } = useParams<{ id: string }>();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [todo, setTodo] = useState<Todo | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  // 데이터가 추가 되고 있는지의 상태
+  const [loading, setLoading] = useState(true);
+  // 연속 처리 방지
   const [saving, setSaving] = useState(false);
+  // 토글 처리
+  const [toggleLoading, setToggleLoading] = useState(false);
 
-  // 이전에는 글자만 state 로 관리했는데, 이제는 파일도 state로 관리해야 한다.
+  // 이미지 파일 보관
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  // 이미지 파일 변경 처리
+  // 이미지 파일 보관용 업데이트
   const handleImageChange = useCallback((images: File[]) => {
     setImageFiles(images);
   }, []);
+
+  // 사용자 정보
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (user?.id) {
+        const userProfile = await getProfile(user.id);
+        setProfile(userProfile);
+      }
+    };
+    loadProfile();
+  }, [user?.id]);
+
+  // Todo 정보 가져오기
+  useEffect(() => {
+    const loadTodo = async () => {
+      if (!id) {
+        navigate('/todos');
+        return;
+      }
+      try {
+        setLoading(true);
+        const todoData = await getTodoById(parseInt(id));
+
+        if (!todoData) {
+          alert('해당 할 일을 찾을 수 없습니다.');
+          navigate('/todos');
+          return;
+        }
+
+        // 본인의 Todo 인지 확인
+        if (todoData.user_id !== user?.id) {
+          alert('수정 권한이 없습니다.');
+          navigate('/todos');
+          return;
+        }
+
+        setTodo(todoData);
+        setTitle(todoData.title);
+        if (todoData.content) {
+          setContent(todoData.content);
+        }
+      } catch (error) {
+        console.log('Todo 로드 실패 : ', error);
+        alert('할 일을 불러오는데 실패했습니다.');
+        navigate('/todos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTodo();
+  }, [id, user?.id, navigate]);
+
+  const handleToggle = async () => {
+    if (!todo) return;
+    try {
+      setToggleLoading(true);
+      const result = await toggleTodo(todo.id, !todo.completed);
+      if (result) {
+        setTodo(result);
+        alert(`할 일이 ${result.completed ? '완료' : '진행 중'}으로 변경되었습니다.`);
+      } else {
+        alert('오류가 발생하였습니다. 잠시 후 다시 시도해 주세요.');
+      }
+    } catch (error) {
+      console.log('상태 변경 실패: ', error);
+      alert('에러가 발생하였습니다');
+    } finally {
+      setToggleLoading(false);
+    }
+  };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -344,39 +489,29 @@ function TodoWritePage() {
     setContent(value);
   };
 
-  const handleCancel = () => {
-    // 사용자가 실수로 취소를 할 수 있으므로 이에 대비
-    if (title.trim() || content.trim()) {
-      if (window.confirm('작성 중인 내용이 있습니다. 정말 취소하시겠습니까?')) {
-        // 목록으로
-        navigate('/todos');
-      }
-    } else {
-      // 목록으로
-      navigate('/todos');
-    }
-  };
-
-  // 기존과는 다르게
-  // 파일 저장 후 성공시
-  // content 내용 중 img src="주소" 변경
-  // DB 를 Insert 합니다.
+  // 아래는 파일도 저장하도록 업데이트
   const handleSave = async () => {
-    // 제목은 필수 입력
+    if (!todo) return;
+
     if (!title.trim()) {
-      alert('제목은 필수 입니다.');
+      alert('제목을 입력하세요.');
       return;
     }
+
     try {
       setSaving(true);
-      // 1. 기존의 content 내용을 보관한다.
-      let finalContent = content; // <img src="blob:~~`/>
-      // 2. files 이 존재한다면
+
+      // 파일 업데이트 처리
+      // 1. 기존의 content 내용을 보관
+      // <img src="blob:~~`/>  새로이 업로드 한 이미지인 경우
+      // <img src="http://~"   기존의 storage 에 있는 경우
+      let finalContent = content;
+
+      // 2. blob 파일이 존재한다면
       if (imageFiles.length > 0) {
         // 모든 blob: 글자를 찾습니다.
         const blobUrlPattern = /blob:[^"'\s]+/g;
         const blobUrls = finalContent.match(blobUrlPattern) || [];
-
         // 혹시라도 이미지 임시 개수와 보관하고 있는 파일개수가 다른 부분 고려
         for (let i = 0; i < blobUrls.length && i < imageFiles.length; i++) {
           const imageFile = imageFiles[i];
@@ -445,78 +580,157 @@ function TodoWritePage() {
         }
       }
 
-      const newTodo: TodoInsert = { title, user_id: user!.id, content: finalContent };
-      const result = await createTodo(newTodo);
-
+      // 현재 finalContent 는 많은 내용이 변경되었음. (기존파일 삭제 또는 신규 파일 추가)
+      const result = await updateTodo(todo.id, { title, content: finalContent });
       if (result) {
-        alert('할 일이 성공적으로 등록되었습니다.');
+        alert('할 일이 성공적으로 수정되었습니다.');
         navigate('/todos');
       } else {
-        alert('오류가 발생했습니다. 다시 시도해 주세요.');
+        alert('수정 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.');
       }
     } catch (error) {
-      console.log('데이터 추가에 실패하였습니다.', error);
-      alert(`데이터 추가에 실패하였습니다. ${error}`);
+      console.log('수정 실패 : ', error);
+      alert('수정에 실패하였습니다');
     } finally {
       setSaving(false);
     }
   };
 
-  // 사용자 정보
-  const [profile, setProfile] = useState<Profile | null>(null);
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (user?.id) {
-        const userProfile = await getProfile(user.id);
-        setProfile(userProfile);
+  const handleCancel = () => {
+    // 바로 취소하지 않음.
+    if (title !== todo?.title || content !== (todo?.content || '')) {
+      if (window.confirm('수정 중인 내용이 있습니다. 정말 취소하시겠습니까?')) {
+        navigate('/todos');
       }
-    };
-    loadProfile();
-  }, [user?.id]);
+    } else {
+      navigate('/todos');
+    }
+  };
+
+  if (loading) {
+    return <Loading message="할 일 정보를 불러오는 중 ..." size="lg" />;
+  }
+
+  if (!todo) {
+    return (
+      <div className="card" style={{ textAlign: 'center' }}>
+        <h3>할 일을 찾을 수 없습니다.</h3>
+        <button className="btn btn-primary" onClick={() => navigate('/todos')}>
+          목록으로 돌아가기
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">✏️ 새 할 일 작성</h2>
-        {profile?.nickname && <p className="page-subtitle">{profile.nickname}님의 새로운 할 일</p>}
+        <h2 className="page-title"> 할 일 수정</h2>
+        {profile?.nickname && <p className="page-subtitle">{profile.nickname}님의 할 일</p>}
       </div>
-      {/* 입력창 */}
+      {/* 상세 내용 */}
       <div className="card">
+        <div className="form-group">
+          <label className="form-label">완료 상태</label>
+          <div>
+            <input
+              type="checkbox"
+              onChange={handleToggle}
+              checked={todo.completed}
+              disabled={toggleLoading || saving}
+              style={{
+                cursor: toggleLoading || saving ? 'not-allowed' : 'pointer',
+                transform: 'scale(1.3)',
+                opacity: toggleLoading || saving ? 0.6 : 1,
+              }}
+            />
+            <span> {todo.completed ? '✅ 완료됨' : '⏳ 진행 중'}</span>
+            {toggleLoading && (
+              <span style={{ color: 'var(--gray-500)', fontSize: '14px' }}>처리 중...</span>
+            )}
+          </div>
+        </div>
         <div className="form-group">
           <label className="form-label">제목</label>
           <input
             type="text"
             className="form-input"
+            onChange={handleTitleChange}
             value={title}
-            onChange={e => handleTitleChange(e)}
-            placeholder="할 일을 입력해주세요."
             disabled={saving}
+            placeholder="할 일을 입력하세요."
           />
         </div>
         <div className="form-group">
           <label className="form-label">상세 내용</label>
           {/* <textarea
             className="form-input"
+            onChange={handleContentChange}
             value={content}
-            onChange={e => handleContentChange(e)}
-            placeholder="상세 내용을 입력해주세요.(선택사항)"
             rows={6}
+            placeholder="상세 내용을 입력하세요.(선택사항)"
             disabled={saving}
           /> */}
           <RichTextEditor
             value={content}
             onChange={handleContentChange}
-            placeholder="상세 내용을 입력해주세요.(선택사항)"
+            placeholder="상세 내용을 입력하세요.(선택사항)"
             disabled={saving}
             onImagesChange={handleImageChange}
           />
         </div>
+        {/* 추가정보 출력 */}
+        <div
+          style={{
+            padding: 'var(--space-4)',
+            backgroundColor: 'var(--gray-50)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
+          <h4 style={{ margin: '0 0 var(--space-3) 0', color: 'var(--gray-700)' }}>할일 정보</h4>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div>
+              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>작성일 :</span>
+              <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
+                {todo.created_at ? new Date(todo.created_at).toLocaleString('ko-KR') : '정보 없음'}
+              </div>
+            </div>
+            <div>
+              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>수정일 : </span>
+              <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
+                {todo.updated_at ? new Date(todo.updated_at).toLocaleString('ko-KR') : '정보 없음'}
+              </div>
+            </div>
+            <div>
+              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>작성자 : </span>
+              <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
+                {profile?.nickname || user?.email}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* 버튼들 */}
         <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-          <button className="btn btn-secondary" onClick={handleCancel} disabled={saving}>
+          <button
+            className="btn btn-secondary"
+            disabled={saving || toggleLoading}
+            onClick={handleCancel}
+          >
             취소
           </button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '⏳ 등록 중...' : '등록'}
+          <button
+            className="btn btn-primary"
+            disabled={saving || toggleLoading}
+            onClick={handleSave}
+          >
+            {saving ? '⏳ 수정 중...' : '수정'}
           </button>
         </div>
       </div>
@@ -524,5 +738,92 @@ function TodoWritePage() {
   );
 }
 
-export default TodoWritePage;
+export default TodoEditPage;
+```
+
+- todoService.ts 에서 `updateTodo` 기능 업데이트
+
+```ts
+/ Todo 수정
+// 로그인을 하고 나면 실제로 user_id 가 이미 파악이 됨
+// TodoUpdate 에서 user_id : 값 을 생략하는 타입을 생성
+// 타입스크립트에서 Omit 을 이용하면, 특정 키를 제거할 수 있음.
+export const updateTodo = async (
+  id: number,
+  updateData: Omit<TodoUpdate, 'user_id'>,
+): Promise<Todo | null> => {
+  try {
+    // 1. 아직 DB 에는 예전의 내용이 있다.
+    // 수정 전 content 에 있던 이미지 URL 들을 확인하기 위함.
+    // 예전 데이터 조회
+    const { data: oldTodo, error: fetchError } = await supabase
+      .from('todos')
+      .select('content')
+      .eq('id', id)
+      .single();
+    if (fetchError) {
+      throw new Error(`updateTodo fetch 오류 : ${fetchError.message}`);
+    }
+
+    // 2. content 가 변경된 경우, 삭제된 이미지들을 정리
+    // 새로운 content 와 기존의 content를 비교
+    // 삭제된 이미지들을 찾아서 storage 에서 제거
+    if (updateData.content && oldTodo.content) {
+      // 정규표현식으로 이미지를 찾음.
+      const oldImageUrlPattern = /https:\/\/[^"'\s]+\.(jpg|jpeg|png|gif|webp|svg)/gi;
+      const newImageUrlPattern = /https:\/\/[^"'\s]+\.(jpg|jpeg|png|gif|webp|svg)/gi;
+
+      // 기존 content 와 새로운 content 에서 이미지 url 을 추출
+      const oldImageUrls: string[] = oldTodo.content.match(oldImageUrlPattern) || [];
+      const newImageUrls: string[] = updateData.content.match(newImageUrlPattern) || [];
+
+      // 삭제된 이미지 URL들을 찾기
+      // 기존에 있던 이미지 URL 중에서 새로운 content에 없는 것들을 필터링
+      const deletedImageUrls = oldImageUrls.filter(item => !newImageUrls.includes(item));
+
+      // 삭제된 이미지로 판별된다면 storage 에서 제거한다.
+      for (const deleteUrl of deletedImageUrls) {
+        try {
+          // url 을 "/" 로 분리해서 배열을 만듦
+          const urlParts = deleteUrl.split('/');
+          // 배열에서 todo-images 버킷 이름이 있는 인덱스 찾는다.
+          const bucketIndex = urlParts.findIndex((item: string) => item === 'todo-images');
+
+          // todo-images 를 찾았고, 다음에 나오는 것들을 이용해서 실제 파일 경로를 만듦
+          if (bucketIndex !== -1 && bucketIndex + 1 < urlParts.length) {
+            const filePath = urlParts.slice(bucketIndex + 1).join('/');
+            // 실제 filePath 로 이미지 삭제하기
+            const { error: deleteError } = await supabase.storage
+              .from('todo-images')
+              .remove([filePath]);
+            // 파일 삭제에 실패하면 메시지 출력
+            if (deleteError) {
+              console.log(`삭제된 파일 정리 실패 : ${filePath}`, deleteError.message);
+            }
+          }
+        } catch (error) {
+          console.log(`이미지 정리 중 오류 : ${deleteUrl}, ${error}`);
+        }
+      }
+    }
+
+    // 3. 데이터 업데이트
+    const { data, error } = await supabase
+      .from('todos')
+      .update({ ...updateData, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`updateTodo 오류 : ${error.message}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
 ```
