@@ -21,16 +21,28 @@ function AuthCallback() {
 
   // 닉네임 추출
   const extractNickname = (user: any, isOAuthLogin: boolean, loginType: string): string => {
-    let nickname = user.user_metadata.nickname;
-    if (isOAuthLogin && !nickname) {
+    let nickname = '';
+
+    if (isOAuthLogin) {
+      // OAuth 로그인 (카카오, 구글)인 경우
       nickname =
+        user.user_metadata.nickname ||
         user.app_metadata.full_name ||
         user.app_metadata.name ||
         user.user_metadata.full_name ||
         user.user_metadata.name ||
         user.email?.split('@')[0] ||
         (loginType === '카카오 로그인' ? '카카오사용자' : '구글사용자');
+    } else {
+      // 이메일 로그인인 경우 - 회원가입 시 저장한 닉네임 사용
+      nickname = user.user_metadata.nickName || user.user_metadata.nickname;
+
+      // 닉네임이 없으면 이메일에서 추출
+      if (!nickname) {
+        nickname = user.email?.split('@')[0] || '이메일사용자';
+      }
     }
+
     return nickname;
   };
 
@@ -69,16 +81,6 @@ function AuthCallback() {
       const error = urlParams.get('error') || hashParams.get('error');
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
-
-      // console.log('OAuth 파라미터:', {
-      //   code: !!code,
-      //   error,
-      //   accessToken: !!accessToken,
-      //   refreshToken: !!refreshToken,
-      //   fullUrl: window.location.href,
-      //   search: window.location.search,
-      //   hash: window.location.hash,
-      // });
 
       if (error) {
         setMsg(`OAuth 오류: ${error}`);
@@ -166,9 +168,11 @@ function AuthCallback() {
 
       // 닉네임 추출
       const nickname = extractNickname(user, isOAuthLogin, loginType);
+      console.log('추출된 닉네임:', nickname);
 
       // 프로필 존재 확인
       const existingProfile = await checkExistingProfile(user.id);
+      console.log('기존 프로필:', existingProfile);
 
       if (!existingProfile && nickname) {
         // 프로필 생성
