@@ -39,7 +39,7 @@ function DirectChatPage() {
     <div className="chat-page">
       {/* 메인 채팅 컨테이너 - 사이드바와 메인 영역으로 구성 */}
       <div className="chat-container">
-        {/* 왼쪽 사이드바 - 채팅 목록 표시 */}
+        {/* 왼쪽 사이드바 - 채팅 목록 표시   */}
         <div className="chat-sidebar">
           <DirectChatList
             onChatSelect={handleChatSelect} // 채팅방 선택시 호출되는 콜백 함수
