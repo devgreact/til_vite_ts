@@ -2,6 +2,23 @@ import React, { useEffect, useRef } from 'react';
 import MessageInput from '../common/MessageInput';
 import { useDirectChat } from '../../../contexts/DirectChatContext';
 
+// 메시지 타입 정의 - 채팅 메시지의 구조를 명확히 정의
+interface Message {
+  id: string; // 메시지 고유 식별자
+  content: string; // 메시지 내용
+  created_at: string; // 메시지 생성 시간 (ISO 문자열)
+  sender: {
+    id: string; // 발신자 ID
+    nickname: string; // 발신자 닉네임
+    avatar_url?: string | null; // 발신자 아바타 URL (선택적, null 허용)
+  };
+}
+
+// 날짜별 메시지 그룹 타입 정의 - 같은 날짜의 메시지들을 그룹화
+interface MessageGroup {
+  [date: string]: Message[]; // 날짜 문자열을 키로 하고 해당 날짜의 메시지 배열을 값으로 함
+}
+
 // DirectChatRoom 컴포넌트이 Props 타입 정의
 interface DirectChatRoomProps {
   chatId: string;
@@ -53,16 +70,16 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
 
   // 메시지를 날짜별로 그룹화하는 함수 - 같은 날짜의 메시지들을 하나의 그룹으로
   // 날짜 구분선도 표시
-  const groupMessagesByDate = (messages: any[]) => {
-    const groups: { [key: string]: any[] } = {};
-    messages.forEach(message => {
-      const date = new Date(message.created_at).toDateString();
+  const groupMessagesByDate = (messages: Message[]): MessageGroup => {
+    const groups: MessageGroup = {}; // 날짜별로 그룹화된 메시지를 저장할 객체
+    messages.forEach((message: Message) => {
+      const date = new Date(message.created_at).toDateString(); // 메시지 생성일을 문자열로 변환
       if (!groups[date]) {
-        groups[date] = [];
+        groups[date] = []; // 해당 날짜의 그룹이 없으면 빈 배열로 초기화
       }
-      groups[date].push(message);
+      groups[date].push(message); // 해당 날짜 그룹에 메시지 추가
     });
-    return groups;
+    return groups; // 날짜별로 그룹화된 메시지 객체 반환
   };
 
   // 현재 사용자 ID (지금은 Mock 버전이어서 current 라고 함)
@@ -137,8 +154,9 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
 
               {/* 메시지들 묶음 컨테이너  */}
               <div className="message-group-container">
-                {dateMessages.map(message => {
-                  const isMyMessage = message.sender.id === currentUserId;
+                {/* 각 메시지를 렌더링 - 타입 안전성을 위해 Message 타입 명시 */}
+                {dateMessages.map((message: Message) => {
+                  const isMyMessage = message.sender.id === currentUserId; // 현재 사용자의 메시지인지 확인
                   return (
                     <div
                       key={message.id}
@@ -153,6 +171,7 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
                             <div className="message-time">{formatTime(message.created_at)}</div>
                           </div>
                           <div className="message-avatar">
+                            {/* 아바타 이미지가 있는지 확인 - 타입 안전성을 위해 null 체크 포함 */}
                             {message.sender.avatar_url ? (
                               <>
                                 {/* 나의 아바타 이미지가 있는 경우 */}
@@ -175,6 +194,7 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
                         <>
                           {/* 대상의 메시지 - 왼쪽 정렬 */}
                           <div className="message-avatar">
+                            {/* 대화상대 아바타 이미지 확인 - 타입 안전성을 위해 null 체크 포함 */}
                             {message.sender.avatar_url ? (
                               <>
                                 {/* 대화상대 아바타 이미지가 있는 경우 */}
