@@ -52,7 +52,7 @@ function DirectChatPage() {
           {/* 선택된 채팅방 ID 유무 */}
           {selectedChatId ? (
             //  채팅방이 선택된 경우 : DirectChatRoom
-            <DirectChatRoom />
+            <DirectChatRoom chatId={selectedChatId} />
           ) : (
             // 채팅방이 선택되지 않은 경우 : 환영 화면 표시
             <div className="chat-welcome">

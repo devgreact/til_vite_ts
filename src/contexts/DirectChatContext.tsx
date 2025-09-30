@@ -172,6 +172,7 @@ export const DirectChatProider: React.FC<DirectChatProiderProps> = ({ children }
       try {
         setLoading(true);
         const response = await findOrCreateDirectChat(participantId);
+
         if (response.success && response.data) {
           // 채팅방 새로 고침으로 목록 갱신
           await loadChats();
