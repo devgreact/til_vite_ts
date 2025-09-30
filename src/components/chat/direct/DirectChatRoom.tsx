@@ -143,8 +143,8 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
             <p>첫 번째 메시지를 보내세요!</p>
           </div>
         ) : (
-          // 날짜 별로 그룹화된 메시지 목록 렌더링
-          Object.entries(messageGroups).map(([date, dateMessages]) => (
+          // 날짜 별로 그룹화된 메시지 목록 렌더링 - 타입 안전성을 위해 명시적 타입 지정
+          Object.entries(messageGroups).map(([date, dateMessages]: [string, Message[]]) => (
             <div key={date} className="message-group">
               {/* 날짜 구분선 */}
               <div className="date-divider">
