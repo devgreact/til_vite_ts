@@ -3,9 +3,10 @@ import MessageInput from '../common/MessageInput';
 import { useDirectChat } from '../../../contexts/DirectChatContext';
 import type { MessageDetail } from '../../../types/ChatType';
 
-// 날짜별 메시지 그룹 타입 정의 - 같은 날짜의 메시지들을 그룹화
+// 날짜별 메시지 그룹 타입 정의  - 같은 날짜의 메시들을 그룹핑
+// 원본데이터를 가공하고 마무리 별도의 파일에 type 으로 정의안함.
 interface MessageGroup {
-  [date: string]: MessageDetail[]; // 날짜 문자열을 키로 하고 해당 날짜의 메시지 배열을 값으로 함
+  [date: string]: MessageDetail[]; // 날짜 문자열을 키로 하고 해당 날짜의 메시지 배열을 값으로 담음.
 }
 
 // DirectChatRoom 컴포넌트이 Props 타입 정의
@@ -21,37 +22,27 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
   // 새메시지가 추가될 때 마다 최신 메시지를 볼 수 있도록 해야 함.
   const messageEndRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * 하단으로 스크롤하는 함수
-   * DOM 업데이트 후 실행되도록 setTimeout 사용
-   */
+  // DOM 업데이트 후 실행되도록 함.
   const scrollToBottom = () => {
-    // DOM 업데이트가 완료된 후 스크롤 실행
+    // DOM 완료 후 실행되도록
     setTimeout(() => {
       messageEndRef.current?.scrollIntoView({
         behavior: 'smooth', // 부드러운 스크롤 애니메이션
         block: 'end', // 수직 스크롤을 요소의 하단에 맞춤
         inline: 'nearest', // 수평 스크롤을 가장 가까운 위치에 맞춤
       });
-    }, 100); // 100ms 지연으로 DOM 렌더링 완료 보장
+    }, 100);
   };
 
-  /**
-   * 메시지 변경 시 자동 스크롤
-   * 새 메시지가 추가되거나 메시지 목록이 변경될 때마다 하단으로 스크롤
-   */
+  // 새로운 메시지가 추가되거나 메시지 목록이 변경이 되면 하단으로 스크롤
   useEffect(() => {
-    // 메시지가 있을 때만 스크롤 실행 - 빈 배열일 때는 스크롤하지 않음
+    // 메시지가 왔을 때만 스크롤 실행
     if (messages.length > 0) {
       scrollToBottom();
     }
   }, [messages]);
 
-  /**
-   * 로딩 완료 후 스크롤
-   * 초기 메시지 로딩이 완료되면 하단으로 스크롤
-   * 로딩 중이 아닐 때와 메시지가 있을 때만 실행
-   */
+  // 초기 로딩 완료 후 스크롤 (메세지 처음 로딩 완료)
   useEffect(() => {
     if (!loading && messages.length > 0) {
       scrollToBottom();
@@ -93,16 +84,21 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
 
   // 메시지를 날짜별로 그룹화하는 함수 - 같은 날짜의 메시지들을 하나의 그룹으로
   // 날짜 구분선도 표시
+  // 사용자가 만약 채팅방을 한개 선택하면 각 채팅방의 메세지 내용이 들어옴
   const groupMessagesByDate = (messages: MessageDetail[]): MessageGroup => {
-    const groups: MessageGroup = {}; // 날짜별로 그룹화된 메시지를 저장할 객체
+    // 날짜별로 그룹화된 메시지를 저장할 객체
+    const groups: MessageGroup = {};
     messages.forEach((message: MessageDetail) => {
-      const date = new Date(message.created_at).toDateString(); // 메시지 생성일을 문자열로 변환
+      // 메시지 생성일의 속성을 문자열로 만듦
+      const date = new Date(message.created_at).toDateString();
+      // 만약 키명으로 새로운 날짜글자가 들어오면 키명을 새로 만들자.
       if (!groups[date]) {
-        groups[date] = []; // 해당 날짜의 그룹이 없으면 빈 배열로 초기화
+        groups[date] = [];
       }
-      groups[date].push(message); // 해당 날짜 그룹에 메시지 추가
+      // 해당 날짜의 그룹에 메시지 추가
+      groups[date].push(message);
     });
-    return groups; // 날짜별로 그룹화된 메시지 객체 반환
+    return groups;
   };
 
   // 현재 사용자 ID (지금은 Mock 버전이어서 current 라고 함)
@@ -166,7 +162,7 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
             <p>첫 번째 메시지를 보내세요!</p>
           </div>
         ) : (
-          // 날짜 별로 그룹화된 메시지 목록 렌더링 - 타입 안전성을 위해 명시적 타입 지정
+          // 날짜 별로 그룹화된 메시지 목록 렌더링
           Object.entries(messageGroups).map(([date, dateMessages]: [string, MessageDetail[]]) => (
             <div key={date} className="message-group">
               {/* 날짜 구분선 */}
@@ -177,9 +173,8 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
 
               {/* 메시지들 묶음 컨테이너  */}
               <div className="message-group-container">
-                {/* 각 메시지를 렌더링 - 타입 안전성을 위해 Message 타입 명시 */}
                 {dateMessages.map((message: MessageDetail) => {
-                  const isMyMessage = message.sender.id === currentUserId; // 현재 사용자의 메시지인지 확인
+                  const isMyMessage = message.sender.id === currentUserId;
                   return (
                     <div
                       key={message.id}
@@ -194,7 +189,6 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
                             <div className="message-time">{formatTime(message.created_at)}</div>
                           </div>
                           <div className="message-avatar">
-                            {/* 아바타 이미지가 있는지 확인 - 타입 안전성을 위해 null 체크 포함 */}
                             {message.sender.avatar_url ? (
                               <>
                                 {/* 나의 아바타 이미지가 있는 경우 */}
@@ -217,7 +211,6 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
                         <>
                           {/* 대상의 메시지 - 왼쪽 정렬 */}
                           <div className="message-avatar">
-                            {/* 대화상대 아바타 이미지 확인 - 타입 안전성을 위해 null 체크 포함 */}
                             {message.sender.avatar_url ? (
                               <>
                                 {/* 대화상대 아바타 이미지가 있는 경우 */}
