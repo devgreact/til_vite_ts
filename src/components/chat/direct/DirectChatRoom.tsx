@@ -123,7 +123,7 @@ const DirectChatRoom = ({ chatId }: DirectChatRoomProps) => {
       // 해당 날짜의 그룹에 메시지 추가
       groups[date].push(message);
     });
-    return groups;
+    return groups; // 날짜별로 그룹화된 메시지 객체 반환
   };
 
   // 현재 사용자 ID (지금은 Mock 버전이어서 current 라고 함)
