@@ -42,6 +42,7 @@ interface DirectChatContextType {
   users: ChatUser[]; // 검색된 여러 사용자
   currentChat: ChatListItem | null; // 현재 선택된 채팅방 정보
   loading: boolean; // 로딩 상태 관리
+  userSearchLoading: boolean; // 사용자 검색 로딩 상태 (별도 관리)
   error: string | null;
   hasNewChatNotification: boolean; // 새 채팅방 알림 여부
   // action ========================
@@ -74,6 +75,7 @@ export const DirectChatProider: React.FC<DirectChatProiderProps> = ({ children }
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [currentChat, setCurrentChat] = useState<ChatListItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [userSearchLoading, setUserSearchLoading] = useState(false); // 사용자 검색 전용 로딩 상태
   const [error, setError] = useState<string | null>(null);
   const [hasNewChatNotification, setHasNewChatNotification] = useState(false);
 
@@ -192,7 +194,7 @@ export const DirectChatProider: React.FC<DirectChatProiderProps> = ({ children }
   const searchUsers = useCallback(
     async (searchTerm: string) => {
       try {
-        setLoading(true);
+        setUserSearchLoading(true); // 사용자 검색 전용 로딩 상태 사용
         const response = await searchUsersService(searchTerm);
         if (response.success && response.data) {
           setUsers(response.data);
@@ -202,7 +204,7 @@ export const DirectChatProider: React.FC<DirectChatProiderProps> = ({ children }
       } catch (err) {
         handleError('사용자 검색 중 오류가 발생했습니다.');
       } finally {
-        setLoading(false);
+        setUserSearchLoading(false); // 사용자 검색 전용 로딩 상태 해제
       }
     },
     [handleError],
@@ -528,6 +530,7 @@ export const DirectChatProider: React.FC<DirectChatProiderProps> = ({ children }
     users,
     currentChat,
     loading,
+    userSearchLoading, // 사용자 검색 전용 로딩 상태 추가
     error,
     hasNewChatNotification,
     // 액션 (action) : 샹태관리 업데이트 함수

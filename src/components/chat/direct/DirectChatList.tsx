@@ -18,8 +18,16 @@ interface DirectChatListProps {
 
 const DirectChatList = ({ onChatSelect, onCreateChat, selectedChatId }: DirectChatListProps) => {
   // Context 활용
-  const { loadChats, createDirectChat, error, users, searchUsers, loading, chats } =
-    useDirectChat();
+  const {
+    loadChats,
+    createDirectChat,
+    error,
+    users,
+    searchUsers,
+    loading,
+    userSearchLoading,
+    chats,
+  } = useDirectChat();
 
   // 사용자 검색 상태 관리
   const [searchTerm, setSearchTerm] = useState<string>(''); // 사용자 검색어
@@ -144,31 +152,36 @@ const DirectChatList = ({ onChatSelect, onCreateChat, selectedChatId }: DirectCh
 
           {/* 검색 결과 목록 */}
           <div className="search-result">
-            {/* 검색된 사용자 출력 */}
-            {users.map(user => (
-              // 사용자 중 대화상대를 선택할 수 있음. : handleUserSelect
-              <div key={user.id} className="user-item" onClick={() => handleUserSelect(user)}>
-                {/* 사용자 아바타 */}
-                <div className="user-avatar">
-                  {user.avatar_url ? (
-                    // 사용자 아바타 이미지 출력
-                    <img src={user.avatar_url} alt={user.nickname} />
-                  ) : (
-                    // 사용자 아바타 닉네임 출력 : 첫 글자만 보여줌
-                    <div className="avatar-placeholder">{user.nickname.charAt(0)}</div>
-                  )}
+            {userSearchLoading ? (
+              // 사용자 검색 로딩 중일 때
+              <div className="loading">사용자 검색 중...</div>
+            ) : (
+              // 검색된 사용자 출력
+              users.map(user => (
+                // 사용자 중 대화상대를 선택할 수 있음. : handleUserSelect
+                <div key={user.id} className="user-item" onClick={() => handleUserSelect(user)}>
+                  {/* 사용자 아바타 */}
+                  <div className="user-avatar">
+                    {user.avatar_url ? (
+                      // 사용자 아바타 이미지 출력
+                      <img src={user.avatar_url} alt={user.nickname} />
+                    ) : (
+                      // 사용자 아바타 닉네임 출력 : 첫 글자만 보여줌
+                      <div className="avatar-placeholder">{user.nickname.charAt(0)}</div>
+                    )}
+                  </div>
+                  {/* 사용자 정보 */}
+                  <div className="user-info">
+                    <div className="user-nickname">{user.nickname}</div>
+                  </div>
                 </div>
-                {/* 사용자 정보 */}
-                <div className="user-info">
-                  <div className="user-nickname">{user.nickname}</div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* 검색 결과가 없을 때 표시 */}
-          {/* 사용자 검색어는 있는데 사용자 목록이 없다면 */}
-          {searchTerm && users.length === 0 && (
+          {/* 사용자 검색어는 있는데 사용자 목록이 없고 로딩 중이 아닐 때 */}
+          {searchTerm && !userSearchLoading && users.length === 0 && (
             <div className="no-results">검색 결과가 없습니다.</div>
           )}
         </div>
