@@ -4,6 +4,29 @@
   display: flex;
   flex-direction: column;
 }
+
+/* 숨김 클래스 */
+.hidden {
+  display: none !important;
+}
+
+/* 시스템 메시지 스타일 */
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.system-message-content {
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-style: italic;
+  max-width: 80%;
+  text-align: center;
+}
 /* 메인 채팅 컨테이너 - 사이드바와 채팅방을 나누는 레이아웃 */
 .chat-container {
   display: flex;

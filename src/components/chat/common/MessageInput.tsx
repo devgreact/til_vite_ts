@@ -55,6 +55,10 @@ const MessageInput = ({ chatId }: MessageInputProps) => {
       console.log('메시지 전송 오류 : ', error);
     } finally {
       setSending(false);
+      // 메시지 전송 후 포커스를 다시 주기 (DOM 업데이트 후)
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
     }
   };
 

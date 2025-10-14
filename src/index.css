@@ -402,6 +402,28 @@ textarea:focus {
   outline-offset: 2px;
 }
 
+/* 알림 배지 스타일 */
+.notification-badge {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px;
+  color: #ff4444;
+  font-size: 12px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* ===== Loading States ===== */
 .loading-container {
   display: flex;

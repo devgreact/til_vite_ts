@@ -118,10 +118,6 @@ function AuthCallback() {
   // 인증 콜백 처리
   const handleAuthCallback = async (): Promise<void> => {
     try {
-      console.log('AuthCallback 시작 - 현재 URL:', window.location.href);
-      console.log('URL 파라미터:', window.location.search);
-      console.log('URL 해시:', window.location.hash);
-
       // 먼저 OAuth 콜백 처리
       await handleOAuthCallback();
       // 세션 확인 (여러 번 시도)
